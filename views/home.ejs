@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <style>
+        /* --- Base & Reset --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        /* --- Navbar --- */
+        nav {
+            background-color: #2c3e50;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        nav h2 {
+            color: #fff;
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+        .nav-links button {
+            background: none;
+            border: none;
+            color: #bdc3c7;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .nav-links button:hover, .nav-links button.active {
+            color: #fff;
+        }
+
+        /* --- Main Container --- */
+        main {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        /* --- Sections --- */
+        .section {
+            display: none; /* Hidden by default, toggled by JS */
+        }
+        .section.active {
+            display: block;
+        }
+
+        /* --- Home/Form Styling --- */
+        .form-container {
+            background: #fff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            max-width: 500px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .form-container h1 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        input[type="text"] {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        button[type="submit"] {
+            background-color: #3498db;
+            color: #fff;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        button[type="submit"]:hover {
+            background-color: #2980b9;
+        }
+        button[type="submit"]:active {
+            transform: scale(0.98);
+        }
+
+        /* --- Success Alert --- */
+        .alert {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 25px;
+            border: 1px solid #c3e6cb;
+        }
+        .alert a {
+            color: #0b2e13;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .alert a:hover {
+            text-decoration: underline;
+        }
+
+        /* --- Table Styling --- */
+        .table-container {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            overflow: hidden; /* Keeps corners rounded */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        thead {
+            background-color: #2c3e50;
+            color: #fff;
+        }
+        th, td {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        tbody tr {
+            transition: background-color 0.2s;
+        }
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav>
+        <h2>ShortLink</h2>
+        <div class="nav-links">
+            <button id="btn-home" class="active" onclick="switchTab('home')">Home</button>
+            
+<% if (locals.user && locals.user.role === 'admin') { %>
+    <button id="btn-urls" onclick="switchTab('urls')">All URLs</button>
+<% } else if (locals.user && locals.user.role === 'user') { %>
+    <button id="btn-urls" onclick="switchTab('urls')">My URLs</button>
+<% } %>
+            <form action="/signout" method="POST" style="display: inline;">
+                <button type="submit" style="background: none; border: none; color: #bdc3c7; font-size: 1rem; font-weight: 600; cursor: pointer;">Sign Out</button>
+            </form>
+        </div>
+    </nav>
+
+    <main>
+        <!-- HOME SECTION -->
+        <section id="home-section" class="section active animate-fade">
+            <div class="form-container">
+                
+                <!-- Success Message shows up here if a link was just created -->
+                <% if (locals.id) { %>
+                    <div class="alert">
+                        Success! Your short URL is: <br>
+                        <a href="http://localhost:8000/<%= locals.id %>" target="_blank">
+                            http://localhost:8000/<%= locals.id %>
+                        </a>
+                    </div>
+                <% } %>
+                
+                <h1>Create a Short URL</h1>
+                <form action="/url" method="POST">
+                    <input type="text" id="url" name="url" placeholder="Paste your long link here... (e.g. https://google.com)" required>
+                    <button type="submit">Shorten URL</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ALL URLS SECTION -->
+        <section id="urls-section" class="section animate-fade">
+            <div class="table-container">
+                <% if (locals.urls && locals.urls.length > 0) { %>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>S. No.</th>
+                                <th>Short ID</th>
+                                <th>Original URL</th>
+                                <th>Total Clicks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% urls.forEach((url, index) => { %>
+                                <tr>
+                                    <td><%= index + 1 %></td>
+                                    <td><strong><%= url.shortID %></strong></td>
+                                    <td>
+                                        <!-- Truncate long URLs visually -->
+                                        <div style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            <a href="<%= url.redirectUrl %>" target="_blank" style="color: #3498db; text-decoration: none;">
+                                                <%= url.redirectUrl %>
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td><%= url.visitHistory.length %></td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                <% } else { %>
+                    <div style="padding: 40px; text-align: center; color: #7f8c8d;">
+                        <h3>No URLs created yet.</h3>
+                        <p>Go to the Home tab to shorten your first link!</p>
+                    </div>
+                <% } %>
+            </div>
+        </section>
+    </main>
+
+    <!-- JavaScript to handle the Navbar Switching -->
+    <script>
+        // NEW CODE: Clean the URL bar so refresh doesn't show the success message again
+        if (window.history.replaceState) {
+            // This strips the '?id=...' from the address bar immediately without reloading the page
+            window.history.replaceState(null, null, window.location.pathname);
+        }
+        function switchTab(tabName) {
+            // 1. Hide all sections
+            document.getElementById('home-section').classList.remove('active');
+            document.getElementById('urls-section').classList.remove('active');
+            
+            // 2. Remove active state from all buttons
+            document.getElementById('btn-home').classList.remove('active');
+            document.getElementById('btn-urls').classList.remove('active');
+            
+            // 3. Show the selected section and highlight the button
+            if (tabName === 'home') {
+                document.getElementById('home-section').classList.add('active');
+                document.getElementById('btn-home').classList.add('active');
+            } else if (tabName === 'urls') {
+                document.getElementById('urls-section').classList.add('active');
+                document.getElementById('btn-urls').classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>
